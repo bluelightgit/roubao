@@ -47,7 +47,8 @@ data class SkillConfig(
     val category: String,
     val keywords: List<String>,
     val params: List<SkillParam>,
-    val relatedApps: List<RelatedApp>
+    val relatedApps: List<RelatedApp>,
+    val promptHint: String? = null  // 提示词约束，如"内容不超过100字"
 )
 
 /**
@@ -60,7 +61,8 @@ data class ExecutionPlan(
     val skillName: String,
     val app: RelatedApp,
     val params: Map<String, Any?>,
-    val isInstalled: Boolean
+    val isInstalled: Boolean,
+    val promptHint: String? = null  // 提示词约束
 ) {
     /**
      * 生成给 Agent 的上下文信息
@@ -70,6 +72,10 @@ data class ExecutionPlan(
             append("【任务】${skillName}\n")
             append("【目标应用】${app.name} (${app.packageName})\n")
             append("【执行方式】${if (app.type == ExecutionType.DELEGATION) "快捷跳转" else "GUI 自动化"}\n")
+
+            if (!promptHint.isNullOrBlank()) {
+                append("【重要提示】⚠️ $promptHint\n")
+            }
 
             if (!app.steps.isNullOrEmpty()) {
                 append("【操作步骤】\n")

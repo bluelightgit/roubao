@@ -522,6 +522,31 @@
     ]
   },
   {
+    "id": "post_xiaohongshu",
+    "name": "发小红书",
+    "description": "在小红书发布笔记",
+    "category": "社交",
+    "keywords": ["发小红书", "小红书", "发笔记", "小红书笔记", "红书"],
+    "params": [
+      {
+        "name": "content",
+        "type": "string",
+        "description": "笔记内容",
+        "required": false
+      }
+    ],
+    "prompt_hint": "小红书笔记内容不能超过100字，请精炼表达",
+    "related_apps": [
+      {
+        "package": "com.xingin.xhs",
+        "name": "小红书",
+        "type": "gui_automation",
+        "priority": 100,
+        "steps": ["打开小红书", "点击底部+号发布", "选择图片或视频", "输入标题和正文（正文不超过100字）", "添加话题标签", "发布"]
+      }
+    ]
+  },
+  {
     "id": "pay",
     "name": "付款",
     "description": "付款/扫码支付",

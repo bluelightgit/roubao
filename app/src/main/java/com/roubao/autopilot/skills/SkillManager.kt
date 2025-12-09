@@ -223,6 +223,11 @@ $skillsInfo
             append("【${config.name}】(置信度: ${(match.score * 100).toInt()}%)\n")
             append("描述: ${config.description}\n\n")
 
+            // 显示提示词约束（如小红书100字限制）
+            if (!config.promptHint.isNullOrBlank()) {
+                append("⚠️ 重要提示: ${config.promptHint}\n\n")
+            }
+
             val typeLabel = when (app.type) {
                 ExecutionType.DELEGATION -> "🚀委托(快速)"
                 ExecutionType.GUI_AUTOMATION -> "🤖GUI自动化"
@@ -296,6 +301,8 @@ $skillsInfo
         return try {
             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                // 明确指定目标包名，避免系统选择其他能响应此 scheme 的应用
+                setPackage(app.packageName)
             }
             context.startActivity(intent)
 
@@ -305,10 +312,25 @@ $skillsInfo
                 message = "已打开 ${app.name}"
             )
         } catch (e: Exception) {
-            SkillResult.Failed(
-                error = "打开 ${app.name} 失败: ${e.message}",
-                suggestion = "请确认应用已安装并支持 DeepLink"
-            )
+            // 如果指定包名失败，尝试不指定包名的方式
+            println("[SkillManager] 指定包名打开失败，尝试通用方式: ${e.message}")
+            try {
+                val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse(deepLink)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(fallbackIntent)
+
+                SkillResult.Delegated(
+                    app = app,
+                    deepLink = deepLink,
+                    message = "已打开 ${app.name}（通用方式）"
+                )
+            } catch (e2: Exception) {
+                SkillResult.Failed(
+                    error = "打开 ${app.name} 失败: ${e2.message}",
+                    suggestion = "请确认应用已安装并支持 DeepLink"
+                )
+            }
         }
     }
 
@@ -325,7 +347,8 @@ $skillsInfo
             skillName = skill.config.name,
             app = app,
             params = params,
-            isInstalled = true
+            isInstalled = true,
+            promptHint = skill.config.promptHint
         )
 
         return SkillResult.NeedAutomation(

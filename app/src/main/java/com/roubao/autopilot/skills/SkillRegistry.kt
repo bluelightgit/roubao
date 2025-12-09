@@ -180,7 +180,8 @@ class SkillRegistry private constructor(
             category = obj.optString("category", "通用"),
             keywords = keywords,
             params = params,
-            relatedApps = relatedApps
+            relatedApps = relatedApps,
+            promptHint = obj.optString("prompt_hint", null)?.takeIf { it.isNotEmpty() }
         )
     }
 

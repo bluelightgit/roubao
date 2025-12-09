@@ -48,11 +48,11 @@ data class PresetCommand(
 
 val presetCommands = listOf(
     PresetCommand("🍔", "点汉堡", "帮我点个附近好吃的汉堡"),
-    PresetCommand("📷", "发微博", "帮我把最后一张照片发送到微博"),
-    PresetCommand("📺", "看B站", "我要看B站热门的视频"),
-    PresetCommand("🛒", "点外卖", "帮我在美团点一份猪脚饭"),
+    PresetCommand("📕", "发小红书", "帮我发一条小红书，内容是今日份好心情"),
+    PresetCommand("📺", "刷B站", "打开B站搜索肉包，找到第一个视频点个赞"),
+    PresetCommand("✈️", "旅游攻略", "用小美帮我查一下三亚旅游攻略"),
     PresetCommand("🎵", "听音乐", "打开网易云音乐播放每日推荐"),
-    PresetCommand("📱", "发消息", "帮我给最近联系人发一条消息说在忙")
+    PresetCommand("🛒", "点外卖", "帮我在美团点一份猪脚饭")
 )
 
 @OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
@@ -430,81 +430,107 @@ fun InputArea(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (isRunning) Arrangement.Center else Arrangement.Start
         ) {
-            // 输入框
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(colors.backgroundInput)
-                    .then(
-                        if (!enabled && !isRunning) {
-                            Modifier.clickable { onInputClick() }
-                        } else {
-                            Modifier
-                        }
+            if (isRunning) {
+                // 运行中只显示停止按钮
+                Button(
+                    onClick = onStop,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error
+                    ),
+                    shape = RoundedCornerShape(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "停止",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
                     )
-                    .padding(horizontal = 20.dp, vertical = 14.dp)
-            ) {
-                if (enabled) {
-                    // Shizuku 已连接，显示可编辑的输入框
-                    BasicTextField(
-                        value = inputText,
-                        onValueChange = onInputChange,
-                        enabled = !isRunning,
-                        textStyle = TextStyle(
-                            color = colors.textPrimary,
-                            fontSize = 15.sp
-                        ),
-                        cursorBrush = SolidColor(colors.primary),
-                        modifier = Modifier.fillMaxWidth(),
-                        decorationBox = { innerTextField ->
-                            Box {
-                                if (inputText.isEmpty()) {
-                                    Text(
-                                        text = "告诉肉包你想做什么...",
-                                        color = colors.textHint,
-                                        fontSize = 15.sp
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        }
-                    )
-                } else {
-                    // Shizuku 未连接，显示提示文字
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "请先连接 Shizuku",
-                        color = colors.textHint,
-                        fontSize = 15.sp
+                        text = "停止执行",
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-            }
+            } else {
+                // 非运行状态显示输入框和发送按钮
+                // 输入框
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(colors.backgroundInput)
+                        .then(
+                            if (!enabled) {
+                                Modifier.clickable { onInputClick() }
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                ) {
+                    if (enabled) {
+                        // Shizuku 已连接，显示可编辑的输入框
+                        BasicTextField(
+                            value = inputText,
+                            onValueChange = onInputChange,
+                            textStyle = TextStyle(
+                                color = colors.textPrimary,
+                                fontSize = 15.sp
+                            ),
+                            cursorBrush = SolidColor(colors.primary),
+                            modifier = Modifier.fillMaxWidth(),
+                            decorationBox = { innerTextField ->
+                                Box {
+                                    if (inputText.isEmpty()) {
+                                        Text(
+                                            text = "告诉肉包你想做什么...",
+                                            color = colors.textHint,
+                                            fontSize = 15.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                    } else {
+                        // Shizuku 未连接，显示提示文字
+                        Text(
+                            text = "请先连接 Shizuku",
+                            color = colors.textHint,
+                            fontSize = 15.sp
+                        )
+                    }
+                }
 
-            Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-            // 发送/停止按钮
-            IconButton(
-                onClick = {
-                    if (isRunning) onStop() else onExecute()
-                },
-                enabled = enabled && (isRunning || inputText.isNotBlank()),
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isRunning) colors.error
-                        else if (inputText.isNotBlank() && enabled) colors.primary
-                        else colors.backgroundInput
+                // 发送按钮
+                IconButton(
+                    onClick = onExecute,
+                    enabled = enabled && inputText.isNotBlank(),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (inputText.isNotBlank() && enabled) colors.primary
+                            else colors.backgroundInput
+                        )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "发送",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
                     )
-            ) {
-                Icon(
-                    imageVector = if (isRunning) Icons.Default.Close else Icons.Default.Send,
-                    contentDescription = if (isRunning) "停止" else "发送",
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
+                }
             }
         }
     }

@@ -44,6 +44,7 @@ private const val TAG = "MainActivity"
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector, val selectedIcon: ImageVector) {
     object Home : Screen("home", "肉包", Icons.Outlined.Home, Icons.Filled.Home)
+    object Capabilities : Screen("capabilities", "能力", Icons.Outlined.Star, Icons.Filled.Star)
     object History : Screen("history", "记录", Icons.Outlined.List, Icons.Filled.List)
     object Settings : Screen("settings", "设置", Icons.Outlined.Settings, Icons.Filled.Settings)
 }
@@ -183,7 +184,7 @@ class MainActivity : ComponentActivity() {
                         contentColor = colors.textPrimary,
                         tonalElevation = 0.dp
                     ) {
-                        listOf(Screen.Home, Screen.History, Screen.Settings).forEach { screen ->
+                        listOf(Screen.Home, Screen.Capabilities, Screen.History, Screen.Settings).forEach { screen ->
                             val selected = currentScreen == screen
                             NavigationBarItem(
                                 icon = {
@@ -251,6 +252,7 @@ class MainActivity : ComponentActivity() {
                                     onShizukuRequired = { showShizukuHelpDialog = true }
                                 )
                             }
+                            Screen.Capabilities -> CapabilitiesScreen()
                             Screen.History -> HistoryScreen(
                                 records = records,
                                 onRecordClick = { record -> selectedRecord = record },
