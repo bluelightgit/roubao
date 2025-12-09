@@ -20,6 +20,10 @@
 </p>
 
 <p align="center">
+  <img src="docs/demo/demo.gif" width="280" alt="演示">
+</p>
+
+<p align="center">
   <img src="docs/screenshots/1.jpg" width="180" alt="首页">
   <img src="docs/screenshots/3.jpg" width="180" alt="能力">
   <img src="docs/screenshots/2.jpg" width="180" alt="执行记录">
