@@ -244,7 +244,7 @@ class MainActivity : ComponentActivity() {
                                     agentState = agentState,
                                     logs = logs,
                                     onExecute = { instruction ->
-                                        runAgent(instruction, settings.apiKey, settings.baseUrl, settings.model)
+                                        runAgent(instruction, settings.apiKey, settings.baseUrl, settings.model, settings.maxSteps)
                                     },
                                     onStop = { mobileAgent.value?.stop() },
                                     shizukuAvailable = isShizukuAvailable,
@@ -266,6 +266,7 @@ class MainActivity : ComponentActivity() {
                                 onAddCustomModel = { settingsManager.addCustomModel(it) },
                                 onRemoveCustomModel = { settingsManager.removeCustomModel(it) },
                                 onUpdateThemeMode = { settingsManager.updateThemeMode(it) },
+                                onUpdateMaxSteps = { settingsManager.updateMaxSteps(it) },
                                 allModels = settingsManager.getAllModels(),
                                 shizukuAvailable = isShizukuAvailable
                             )
@@ -374,7 +375,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun runAgent(instruction: String, apiKey: String, baseUrl: String, model: String) {
+    private fun runAgent(instruction: String, apiKey: String, baseUrl: String, model: String, maxSteps: Int) {
         if (instruction.isBlank()) {
             Toast.makeText(this, "请输入指令", Toast.LENGTH_SHORT).show()
             return
@@ -426,7 +427,7 @@ class MainActivity : ComponentActivity() {
             executionRecords.value = executionRepository.getAllRecords()
 
             try {
-                val result = mobileAgent.value!!.runInstruction(instruction)
+                val result = mobileAgent.value!!.runInstruction(instruction, maxSteps)
 
                 // 更新记录状态
                 val agentState = mobileAgent.value?.state?.value

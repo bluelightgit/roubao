@@ -51,6 +51,7 @@ fun SettingsScreen(
     onAddCustomModel: (String) -> Unit,
     onRemoveCustomModel: (String) -> Unit,
     onUpdateThemeMode: (ThemeMode) -> Unit,
+    onUpdateMaxSteps: (Int) -> Unit,
     allModels: List<String>,
     shizukuAvailable: Boolean
 ) {
@@ -59,6 +60,7 @@ fun SettingsScreen(
     var showModelDialog by remember { mutableStateOf(false) }
     var showAddModelDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showMaxStepsDialog by remember { mutableStateOf(false) }
     var showShizukuHelpDialog by remember { mutableStateOf(false) }
     var showOverlayHelpDialog by remember { mutableStateOf(false) }
 
@@ -111,6 +113,21 @@ fun SettingsScreen(
                     ThemeMode.SYSTEM -> "跟随系统"
                 },
                 onClick = { showThemeDialog = true }
+            )
+        }
+
+        // 执行设置分组
+        item {
+            SettingsSection(title = "执行设置")
+        }
+
+        // 最大步数设置
+        item {
+            SettingsItem(
+                icon = Icons.Default.Settings,
+                title = "最大执行步数",
+                subtitle = "${settings.maxSteps} 步",
+                onClick = { showMaxStepsDialog = true }
             )
         }
 
@@ -240,6 +257,18 @@ fun SettingsScreen(
             onSelect = {
                 onUpdateThemeMode(it)
                 showThemeDialog = false
+            }
+        )
+    }
+
+    // 最大步数设置对话框
+    if (showMaxStepsDialog) {
+        MaxStepsDialog(
+            currentSteps = settings.maxSteps,
+            onDismiss = { showMaxStepsDialog = false },
+            onConfirm = {
+                onUpdateMaxSteps(it)
+                showMaxStepsDialog = false
             }
         )
     }
@@ -963,4 +992,111 @@ private fun BulletPoint(text: String) {
             color = colors.textPrimary
         )
     }
+}
+
+@Composable
+fun MaxStepsDialog(
+    currentSteps: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    val colors = BaoziTheme.colors
+    var steps by remember { mutableStateOf(currentSteps.toFloat()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.backgroundCard,
+        title = {
+            Text("最大执行步数", color = colors.textPrimary)
+        },
+        text = {
+            Column {
+                Text(
+                    text = "设置 Agent 单次任务的最大执行步数。步数越多，能完成的任务越复杂，但消耗的 token 也越多。",
+                    fontSize = 14.sp,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                // 当前值显示
+                Text(
+                    text = "${steps.toInt()} 步",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.primary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                // 滑块
+                Slider(
+                    value = steps,
+                    onValueChange = { steps = it },
+                    valueRange = 5f..100f,
+                    steps = 18, // (100-5)/5 - 1 = 18 个刻度点，每 5 步一个
+                    colors = SliderDefaults.colors(
+                        thumbColor = colors.primary,
+                        activeTrackColor = colors.primary,
+                        inactiveTrackColor = colors.backgroundInput
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // 范围提示
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "5",
+                        fontSize = 12.sp,
+                        color = colors.textHint
+                    )
+                    Text(
+                        text = "100",
+                        fontSize = 12.sp,
+                        color = colors.textHint
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 快捷选项
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(15, 25, 50).forEach { preset ->
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { steps = preset.toFloat() },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (steps.toInt() == preset) colors.primary else colors.backgroundInput
+                        ) {
+                            Text(
+                                text = "$preset",
+                                fontSize = 14.sp,
+                                color = if (steps.toInt() == preset) Color.White else colors.textSecondary,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(steps.toInt()) }) {
+                Text("确定", color = colors.primary)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消", color = colors.textSecondary)
+            }
+        }
+    )
 }

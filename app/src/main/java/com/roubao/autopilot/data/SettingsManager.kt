@@ -39,7 +39,8 @@ data class AppSettings(
     val model: String = ApiProvider.ALIYUN.defaultModel,
     val customModels: List<String> = emptyList(),
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val hasSeenOnboarding: Boolean = false
+    val hasSeenOnboarding: Boolean = false,
+    val maxSteps: Int = 25
 )
 
 /**
@@ -66,7 +67,8 @@ class SettingsManager(context: Context) {
             model = prefs.getString("model", AppSettings().model) ?: AppSettings().model,
             customModels = prefs.getStringSet("custom_models", emptySet())?.toList() ?: emptyList(),
             themeMode = themeMode,
-            hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false)
+            hasSeenOnboarding = prefs.getBoolean("has_seen_onboarding", false),
+            maxSteps = prefs.getInt("max_steps", 25)
         )
     }
 
@@ -124,5 +126,11 @@ class SettingsManager(context: Context) {
     fun setOnboardingSeen() {
         prefs.edit().putBoolean("has_seen_onboarding", true).apply()
         _settings.value = _settings.value.copy(hasSeenOnboarding = true)
+    }
+
+    fun updateMaxSteps(maxSteps: Int) {
+        val validSteps = maxSteps.coerceIn(5, 100) // 限制范围 5-100
+        prefs.edit().putInt("max_steps", validSteps).apply()
+        _settings.value = _settings.value.copy(maxSteps = validSteps)
     }
 }
