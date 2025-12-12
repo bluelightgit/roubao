@@ -1,12 +1,15 @@
 package com.roubao.autopilot
 
+import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
@@ -29,6 +32,7 @@ import android.provider.Settings
 import com.roubao.autopilot.agent.MobileAgent
 import com.roubao.autopilot.controller.AppScanner
 import com.roubao.autopilot.controller.DeviceController
+import com.roubao.autopilot.controller.MediaProjectionScreenshotter
 import com.roubao.autopilot.data.*
 import com.roubao.autopilot.ui.screens.*
 import com.roubao.autopilot.ui.theme.*
@@ -168,6 +172,7 @@ class MainActivity : ComponentActivity() {
         var hasShownShizukuHelp by remember { mutableStateOf(false) }
 
         val settings by settingsManager.settings.collectAsState()
+        val context = LocalContext.current
         val colors = BaoziTheme.colors
         val agent = mobileAgent.value
         val agentState by agent?.state?.collectAsState() ?: remember { mutableStateOf(null) }
@@ -177,6 +182,30 @@ class MainActivity : ComponentActivity() {
         val executing by remember { isExecuting }
         val navigateToRecord by remember { shouldNavigateToRecord }
         val recordId by remember { currentRecordId }
+
+        val mediaProjectionGranted by MediaProjectionScreenshotter.permissionGranted.collectAsState()
+        var hasRequestedMediaProjectionPermission by remember { mutableStateOf(false) }
+        val mediaProjectionLauncher = rememberLauncherForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            val data = result.data
+            if (result.resultCode == Activity.RESULT_OK && data != null) {
+                MediaProjectionScreenshotter.setPermission(result.resultCode, data)
+                Toast.makeText(context, "MediaProjection 授权成功", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "已取消授权", Toast.LENGTH_SHORT).show()
+            }
+        }
+        val requestMediaProjectionPermission = {
+            hasRequestedMediaProjectionPermission = true
+            try {
+                mediaProjectionLauncher.launch(
+                    MediaProjectionScreenshotter.createScreenCaptureIntent(context)
+                )
+            } catch (_: Exception) {
+                Toast.makeText(context, "无法发起 MediaProjection 授权", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         // 监听跳转事件
         LaunchedEffect(navigateToRecord, recordId) {
@@ -188,6 +217,17 @@ class MainActivity : ComponentActivity() {
                     currentScreen = Screen.History
                 }
                 shouldNavigateToRecord.value = false
+            }
+        }
+
+        // MediaProjection 授权（启动时/切换到 MediaProjection 模式时自动弹出一次）
+        LaunchedEffect(settings.screenshotMode, mediaProjectionGranted) {
+            if (settings.screenshotMode != ScreenshotMode.MEDIA_PROJECTION) {
+                hasRequestedMediaProjectionPermission = false
+                return@LaunchedEffect
+            }
+            if (!mediaProjectionGranted && !hasRequestedMediaProjectionPermission) {
+                requestMediaProjectionPermission()
             }
         }
 
@@ -295,6 +335,9 @@ class MainActivity : ComponentActivity() {
                                 onUpdateCachedModels = { settingsManager.updateCachedModels(it) },
                                 onUpdateThemeMode = { settingsManager.updateThemeMode(it) },
                                 onUpdateMaxSteps = { settingsManager.updateMaxSteps(it) },
+                                onUpdateScreenshotMode = { settingsManager.updateScreenshotMode(it) },
+                                mediaProjectionGranted = mediaProjectionGranted,
+                                onRequestMediaProjectionPermission = requestMediaProjectionPermission,
                                 onUpdateCloudCrashReport = { enabled ->
                                     settingsManager.updateCloudCrashReportEnabled(enabled)
                                     App.getInstance().updateCloudCrashReportEnabled(enabled)

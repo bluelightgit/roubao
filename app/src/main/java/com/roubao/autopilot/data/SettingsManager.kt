@@ -65,8 +65,14 @@ data class AppSettings(
     val maxSteps: Int = 25,
     val cloudCrashReportEnabled: Boolean = true, // 云端崩溃上报，默认开启
     val rootModeEnabled: Boolean = false, // Shizuku Root 模式
-    val suCommandEnabled: Boolean = false // 允许 su -c 命令（需要 Root 模式开启）
+    val suCommandEnabled: Boolean = false, // 允许 su -c 命令（需要 Root 模式开启）
+    val screenshotMode: ScreenshotMode = ScreenshotMode.SHIZUKU_SCREENCAP // 截图方式
 )
+
+enum class ScreenshotMode {
+    SHIZUKU_SCREENCAP,
+    MEDIA_PROJECTION
+}
 
 /**
  * 设置管理器
@@ -127,6 +133,14 @@ class SettingsManager(context: Context) {
         } catch (e: Exception) {
             ThemeMode.DARK
         }
+        val screenshotModeStr =
+            prefs.getString("screenshot_mode", ScreenshotMode.SHIZUKU_SCREENCAP.name)
+                ?: ScreenshotMode.SHIZUKU_SCREENCAP.name
+        val screenshotMode = try {
+            ScreenshotMode.valueOf(screenshotModeStr)
+        } catch (e: Exception) {
+            ScreenshotMode.SHIZUKU_SCREENCAP
+        }
         return AppSettings(
             apiKey = securePrefs.getString("api_key", "") ?: "",  // 从加密存储读取
             baseUrl = prefs.getString("base_url", ApiProvider.ALIYUN.baseUrl) ?: ApiProvider.ALIYUN.baseUrl,
@@ -137,7 +151,8 @@ class SettingsManager(context: Context) {
             maxSteps = prefs.getInt("max_steps", 25),
             cloudCrashReportEnabled = prefs.getBoolean("cloud_crash_report_enabled", true),
             rootModeEnabled = prefs.getBoolean("root_mode_enabled", false),
-            suCommandEnabled = prefs.getBoolean("su_command_enabled", false)
+            suCommandEnabled = prefs.getBoolean("su_command_enabled", false),
+            screenshotMode = screenshotMode
         )
     }
 
@@ -234,5 +249,10 @@ class SettingsManager(context: Context) {
     fun updateSuCommandEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("su_command_enabled", enabled).apply()
         _settings.value = _settings.value.copy(suCommandEnabled = enabled)
+    }
+
+    fun updateScreenshotMode(mode: ScreenshotMode) {
+        prefs.edit().putString("screenshot_mode", mode.name).apply()
+        _settings.value = _settings.value.copy(screenshotMode = mode)
     }
 }

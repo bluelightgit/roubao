@@ -43,6 +43,7 @@ import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.roubao.autopilot.BuildConfig
 import com.roubao.autopilot.data.ApiProvider
 import com.roubao.autopilot.data.AppSettings
+import com.roubao.autopilot.data.ScreenshotMode
 import com.roubao.autopilot.ui.theme.BaoziTheme
 import com.roubao.autopilot.ui.theme.ThemeMode
 import com.roubao.autopilot.utils.CrashHandler
@@ -56,6 +57,9 @@ fun SettingsScreen(
     onUpdateCachedModels: (List<String>) -> Unit,
     onUpdateThemeMode: (ThemeMode) -> Unit,
     onUpdateMaxSteps: (Int) -> Unit,
+    onUpdateScreenshotMode: (ScreenshotMode) -> Unit,
+    mediaProjectionGranted: Boolean,
+    onRequestMediaProjectionPermission: () -> Unit,
     onUpdateCloudCrashReport: (Boolean) -> Unit,
     onUpdateRootModeEnabled: (Boolean) -> Unit,
     onUpdateSuCommandEnabled: (Boolean) -> Unit,
@@ -64,10 +68,13 @@ fun SettingsScreen(
     onFetchModels: ((onSuccess: (List<String>) -> Unit, onError: (String) -> Unit) -> Unit)? = null
 ) {
     val colors = BaoziTheme.colors
+    val context = LocalContext.current
+
     var showApiKeyDialog by remember { mutableStateOf(false) }
     var showModelDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showMaxStepsDialog by remember { mutableStateOf(false) }
+    var showScreenshotModeDialog by remember { mutableStateOf(false) }
     var showBaseUrlDialog by remember { mutableStateOf(false) }
     var showShizukuHelpDialog by remember { mutableStateOf(false) }
     var showOverlayHelpDialog by remember { mutableStateOf(false) }
@@ -139,6 +146,33 @@ fun SettingsScreen(
                 subtitle = "${settings.maxSteps} 步",
                 onClick = { showMaxStepsDialog = true }
             )
+        }
+
+        // 截图方式
+        item {
+            SettingsItem(
+                icon = Icons.Default.Search,
+                title = "截图方式",
+                subtitle = when (settings.screenshotMode) {
+                    ScreenshotMode.SHIZUKU_SCREENCAP -> "screencap（默认）"
+                    ScreenshotMode.MEDIA_PROJECTION -> "MediaProjection（需授权）"
+                },
+                onClick = { showScreenshotModeDialog = true }
+            )
+        }
+
+        // MediaProjection 授权
+        if (settings.screenshotMode == ScreenshotMode.MEDIA_PROJECTION) {
+            item {
+                SettingsItem(
+                    icon = Icons.Default.Lock,
+                    title = "MediaProjection 授权",
+                    subtitle = if (mediaProjectionGranted) "已授权（重启后可能需要重新授权）" else "未授权，点击重新授权",
+                    onClick = {
+                        onRequestMediaProjectionPermission()
+                    }
+                )
+            }
         }
 
         // Shizuku 高级设置分组（仅在 Shizuku 可用时显示）
@@ -457,7 +491,6 @@ fun SettingsScreen(
         }
 
         item {
-            val context = LocalContext.current
             val logStats = remember { mutableStateOf(CrashHandler.getLogStats(context)) }
 
             SettingsItem(
@@ -471,7 +504,6 @@ fun SettingsScreen(
         }
 
         item {
-            val context = LocalContext.current
             var showClearDialog by remember { mutableStateOf(false) }
 
             SettingsItem(
@@ -577,6 +609,18 @@ fun SettingsScreen(
             onConfirm = {
                 onUpdateMaxSteps(it)
                 showMaxStepsDialog = false
+            }
+        )
+    }
+
+    // 截图方式对话框
+    if (showScreenshotModeDialog) {
+        ScreenshotModeSelectDialog(
+            currentMode = settings.screenshotMode,
+            onDismiss = { showScreenshotModeDialog = false },
+            onSelect = {
+                onUpdateScreenshotMode(it)
+                showScreenshotModeDialog = false
             }
         )
     }
@@ -797,6 +841,71 @@ fun ThemeSelectDialog(
                     ThemeMode.SYSTEM to "跟随系统"
                 ).forEach { (mode, label) ->
                     val isSelected = mode == currentTheme
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onSelect(mode) },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) colors.primary.copy(alpha = 0.15f) else Color.Transparent
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = colors.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .border(2.dp, colors.textHint, CircleShape)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = label,
+                                fontSize = 14.sp,
+                                color = if (isSelected) colors.primary else colors.textPrimary
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭", color = colors.textSecondary)
+            }
+        }
+    )
+}
+
+@Composable
+fun ScreenshotModeSelectDialog(
+    currentMode: ScreenshotMode,
+    onDismiss: () -> Unit,
+    onSelect: (ScreenshotMode) -> Unit
+) {
+    val colors = BaoziTheme.colors
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = colors.backgroundCard,
+        title = {
+            Text("截图方式", color = colors.textPrimary)
+        },
+        text = {
+            Column {
+                listOf(
+                    ScreenshotMode.SHIZUKU_SCREENCAP to "screencap（默认）",
+                    ScreenshotMode.MEDIA_PROJECTION to "MediaProjection（需授权）"
+                ).forEach { (mode, label) ->
+                    val isSelected = mode == currentMode
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()

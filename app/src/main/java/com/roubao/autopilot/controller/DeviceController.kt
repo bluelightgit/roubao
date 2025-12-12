@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import com.roubao.autopilot.IShellService
+import com.roubao.autopilot.data.ScreenshotMode
 import com.roubao.autopilot.service.ShellService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -336,12 +337,39 @@ class DeviceController(private val context: Context? = null) {
         val isFallback: Boolean = false    // 是否是降级的黑屏占位图
     )
 
+    private fun getScreenshotMode(): ScreenshotMode {
+        val ctx = context ?: return ScreenshotMode.SHIZUKU_SCREENCAP
+        val prefs = ctx.getSharedPreferences("baozi_settings", Context.MODE_PRIVATE)
+        val modeStr =
+            prefs.getString("screenshot_mode", ScreenshotMode.SHIZUKU_SCREENCAP.name)
+                ?: ScreenshotMode.SHIZUKU_SCREENCAP.name
+        return try {
+            ScreenshotMode.valueOf(modeStr)
+        } catch (_: Exception) {
+            ScreenshotMode.SHIZUKU_SCREENCAP
+        }
+    }
+
     /**
      * 截图 - 使用 /data/local/tmp 并设置全局可读权限
      * 失败时返回黑屏占位图（降级处理）
      */
     suspend fun screenshotWithFallback(): ScreenshotResult = withContext(Dispatchers.IO) {
         try {
+            val screenshotMode = getScreenshotMode()
+            if (screenshotMode == ScreenshotMode.MEDIA_PROJECTION && context != null) {
+                try {
+                    val bitmap = MediaProjectionScreenshotter.takeScreenshot(context)
+                    if (bitmap != null) {
+                        return@withContext ScreenshotResult(bitmap)
+                    }
+                    println("[DeviceController] MediaProjection screenshot failed, falling back to screencap")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    println("[DeviceController] MediaProjection screenshot exception, falling back to screencap")
+                }
+            }
+
             // 截图到 /data/local/tmp 并设置权限让 App 可读
             val output = exec("screencap -p $SCREENSHOT_PATH && chmod 666 $SCREENSHOT_PATH")
             delay(500)
